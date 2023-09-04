@@ -5,8 +5,13 @@ import com.driver.model.ProductionHouse;
 import com.driver.model.WebSeries;
 import com.driver.repository.ProductionHouseRepository;
 import com.driver.repository.WebSeriesRepository;
+import com.driver.transformer.WebSeriesTransformer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 public class WebSeriesService {
@@ -23,8 +28,57 @@ public class WebSeriesService {
         //Incase the seriesName is already present in the Db throw Exception("Series is already present")
         //use function written in Repository Layer for the same
         //Dont forget to save the production and webseries Repo
+        WebSeries webSeries = WebSeriesTransformer.convertDtoToEntity(webSeriesEntryDto);
+        WebSeries checkSeries = webSeriesRepository.findBySeriesName(webSeries.getSeriesName());
+        if(checkSeries != null){
+            throw new Exception("Series is already present");
+        }
+        int id = webSeriesEntryDto.getProductionHouseId();
+        Optional<ProductionHouse> productionHouseOpt = productionHouseRepository.findById(id);
+        ProductionHouse productionHouse = productionHouseOpt.get();
+        if(productionHouse == null){
+            throw new Exception("Production house is not present");
+        }
 
-        return null;
+        webSeries.setProductionHouse(productionHouse);
+        webSeries = webSeriesRepository.save(webSeries);
+
+        List<WebSeries> seriesList = productionHouse.getWebSeriesList();
+        seriesList.add(webSeries);
+
+        double productionHouseRating = 0;
+        for(WebSeries series : seriesList){
+            productionHouseRating += series.getRating();
+        }
+        int seriesCount = seriesList.size();
+        productionHouseRating = productionHouseRating / seriesCount;
+
+        productionHouse.setRatings(productionHouseRating);
+
+        productionHouseRepository.save(productionHouse);
+
+        return webSeries.getId();
+//        Optional<ProductionHouse> houseOptional = productionHouseRepository.findById(webSeriesEntryDto.getProductionHouseId());
+//        if(houseOptional.isEmpty()){
+//            throw new Exception("Production house is not present");
+//        }
+//        ProductionHouse productionHouse = houseOptional.get();
+//        WebSeries webSeries = webSeriesRepository.findBySeriesName(webSeriesEntryDto.getSeriesName());
+//        if(webSeries!=null){
+//            throw new Exception("Series is already present");
+//        }
+//        webSeries = WebSeriesTransformer.WebSeriesEntryDtoToWebSeries(webSeriesEntryDto);
+//        webSeries.setProductionHouse(productionHouse);
+//        webSeries = webSeriesRepository.save(webSeries);
+//        productionHouse.getWebSeriesList().add(webSeries);
+//        double rating = 0.0;
+//        for(WebSeries ws : productionHouse.getWebSeriesList()){
+//            rating+=ws.getRating();
+//        }
+//        rating/=productionHouse.getWebSeriesList().size();
+//        productionHouse.setRatings(rating);
+//        ProductionHouse savedProductionHouse = productionHouseRepository.save(productionHouse);
+//        return webSeries.getId();
     }
 
 }
